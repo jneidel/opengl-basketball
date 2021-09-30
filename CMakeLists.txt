@@ -15,8 +15,6 @@ if( CMAKE_BINARY_DIR MATCHES " " )
 	message( "Your Build Directory contains spaces. If you experience problems when compiling, this can be the cause." )
 endif()
 
-
-
 # Compile external dependencies
 add_subdirectory (external)
 
@@ -30,15 +28,13 @@ if(INCLUDE_DISTRIB)
 	add_subdirectory(distrib)
 endif(INCLUDE_DISTRIB)
 
-
-
 include_directories(
 	external/AntTweakBar-1.16/include/
 	external/glfw-3.1.2/include/
 	external/glm-0.9.7.1/
 	external/glew-1.13.0/include/
 	external/assimp-3.0.1270/include/
-	external/bullet-2.81-rev2613/src/
+	external/bullet3-3.17/src/
 	.
 )
 
@@ -46,6 +42,9 @@ set(ALL_LIBS
 	${OPENGL_LIBRARY}
 	glfw
 	GLEW_1130
+  BulletDynamics
+  BulletCollision
+  LinearMath
 )
 
 add_definitions(

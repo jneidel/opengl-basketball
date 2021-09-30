@@ -123,7 +123,6 @@ GLuint loadBMP_custom(const char * imagepath){
 #define FOURCC_DXT5 0x35545844 // Equivalent to "DXT5" in ASCII
 
 GLuint loadDDS(const char * imagepath){
-
 	unsigned char header[124];
 
 	FILE *fp;
@@ -211,6 +210,4 @@ GLuint loadDDS(const char * imagepath){
 	free(buffer);
 
 	return textureID;
-
-
 }
