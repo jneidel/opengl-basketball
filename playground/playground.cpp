@@ -4,7 +4,6 @@
 /* MVP Specs
 
   - shooting
-    - get direction on cursor
     - load up force with left mouse click
     - bar to display force
     - ball rotation
@@ -330,17 +329,46 @@ float rotate_ball() {
   return rotation_ball;
 }
 
+float force = 50;
 void fireBall(GLFWwindow* window, int button, int action, int mods) {
   // Todo: check if ball is resting
   if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-    float h = fmod(getHorizontalAngle()+3.14, 6.28);
-    if (h < 0) {
-      h = fmod(6.28-h, 6.28);
+    /* For the angles from glfw:
+     * 6.28 is 360°
+     * 3.14 is 180°
+     * 1.57 is  90°
+     */
+    float h = (getHorizontalAngle()-3.14)*-1; // shifted by 180° and inverted axis
+    float v = getVerticalAngle();
+    if (h < -1.57 || h > 1.57) {
+      fprintf( stderr, "Camera looking out of bounds, won't fire (h=%f)\n", h );
+      return;
     }
-    float v = fmod(getVerticalAngle(), 6.28);
-    printf("%f\n", v);
+    if (v < -1.57 || v > 1.57) {
+      fprintf( stderr, "Camera looking out of bounds, won't fire (v=%f)\n", h );
+      return;
+    }
 
-    /* ballBody->applyForce(btVector3(0,0,-20), btVector3(0,6,12)); */
+    /* Force calcs (my own formula)
+     *   example: x all the way to the left (-1.57) and y=0
+     *       xForce = -1
+     *       yForce =  0
+     *       zForce = (1-1)*(1-0) = 0
+     *
+     *   Another one: x=1 y=1 (up to the right)
+     *       xForce = 0.63
+     *       yForce = 0.63
+     *       zForce = (1-0.63)*(1-0.63) = 0.13
+     */
+
+    float xForce = h/1.57;
+    float yForce = v/1.57;
+    float zForce = (1-abs(xForce))*(1-abs(yForce))*-1; // inverted axis
+
+    ballBody->applyForce(
+      btVector3(xForce*force, yForce*force, zForce*force),
+      btVector3(0,6,12)
+    );
   }
   return;
 }
