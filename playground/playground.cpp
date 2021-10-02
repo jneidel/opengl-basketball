@@ -60,6 +60,9 @@ btVector3 backLocation(0, 0, hoopOffset*-1);
 btVector3 frontLocation(0, 0, hoopOffset);
 btVector3 rightLocation(hoopOffset, 0, 0);
 btVector3 leftLocation(hoopOffset*-1, 0, 0);
+vec2 hoopHitboxX;
+float hoopHitboxY;
+vec2 hoopHitboxZ;
 
 mat4 hoopTranslation = mat4();
 void hoop_location(float x, float y, float z) {
@@ -68,6 +71,10 @@ void hoop_location(float x, float y, float z) {
   rightLocation = btVector3(x+hoopOffset, y, z);
   leftLocation = btVector3(x+hoopOffset*-1, y, z);
   hoopTranslation = translate(mat4(), vec3(x, y, z));
+
+  hoopHitboxX = vec2( x+hoopOffset*-1, x+hoopOffset );
+  hoopHitboxY = y;
+  hoopHitboxZ = vec2( z+hoopOffset*-1, z+hoopOffset );
 }
 
 btVector3 ballPosition = btVector3(0, 3, 0);
