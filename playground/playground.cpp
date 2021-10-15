@@ -10,11 +10,10 @@
       - func calculating rotation based on last location (differences)
     - stop sliding on forever (friction?)
   - scene
-    - hoop
-      - working hit box
-      - register korb (sucess)
-    - board
-    - pole
+    - target
+      - graphic
+      - register hit
+    - surroundings
   - docs
     - readme
     - how to play
@@ -52,28 +51,6 @@ void print_mat4( mat4 toPrint ) {
 }
 void print_vec4( vec4 toPrint ) {
   std::cout<<glm::to_string(toPrint)<<std::endl;
-}
-
-float hoopOffset = 1.0;
-btVector3 backLocation(0, 0, hoopOffset*-1);
-btVector3 frontLocation(0, 0, hoopOffset);
-btVector3 rightLocation(hoopOffset, 0, 0);
-btVector3 leftLocation(hoopOffset*-1, 0, 0);
-vec2 hoopHitboxX;
-float hoopHitboxY;
-vec2 hoopHitboxZ;
-
-mat4 hoopTranslation = mat4();
-void hoop_location(float x, float y, float z) {
-  backLocation = btVector3(x, y, z+hoopOffset*-1);
-  frontLocation = btVector3(x, y, z+hoopOffset);
-  rightLocation = btVector3(x+hoopOffset, y, z);
-  leftLocation = btVector3(x+hoopOffset*-1, y, z);
-  hoopTranslation = translate(mat4(), vec3(x, y, z));
-
-  hoopHitboxX = vec2( x+hoopOffset*-1, x+hoopOffset );
-  hoopHitboxY = y;
-  hoopHitboxZ = vec2( z+hoopOffset*-1, z+hoopOffset );
 }
 
 btVector3 ballPosition = btVector3(0, 3, 0);
@@ -125,76 +102,6 @@ btDiscreteDynamicsWorld* initBulletWorld() {
     /* ballBody->applyForce(btVector3(0, 0, -35), btVector3(0, 6, 12)); */
 
 		dynamicsWorld->addRigidBody(ballBody);
-	}
-
-  btVector3 hoopShape(0.01, 0.01, 0.01);
-  float hoopRestitution = 0.5f;
-  float hoopFriction = 1.0f;
-
-  {
-		btCollisionShape* hoop_back = new btBoxShape(hoopShape);
-		collisionShapes.push_back(hoop_back);
-
-		btTransform transform;
-		transform.setIdentity();
-		transform.setOrigin(backLocation);
-
-		btScalar mass(0.);
-		btVector3 localInertia(0, 0, 0);
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(transform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, hoop_back, localInertia);
-    rbInfo.m_restitution = hoopRestitution;
-    rbInfo.m_friction = hoopFriction;
-		btRigidBody* body = new btRigidBody(rbInfo);
-		dynamicsWorld->addRigidBody(body);
-	}
-  {
-		btCollisionShape* hoop_front = new btBoxShape(hoopShape);
-		collisionShapes.push_back(hoop_front);
-		btTransform transform;
-		transform.setIdentity();
-		transform.setOrigin(frontLocation);
-		btScalar mass(0.);
-		btVector3 localInertia(0, 0, 0);
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(transform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, hoop_front, localInertia);
-    rbInfo.m_restitution = hoopRestitution;
-    rbInfo.m_friction = hoopFriction;
-		btRigidBody* body = new btRigidBody(rbInfo);
-		dynamicsWorld->addRigidBody(body);
-	}
-  {
-		btCollisionShape* hoop_right = new btBoxShape(hoopShape);
-		collisionShapes.push_back(hoop_right);
-
-		btTransform transform;
-		transform.setIdentity();
-		transform.setOrigin(rightLocation);
-
-		btScalar mass(0.);
-		btVector3 localInertia(0, 0, 0);
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(transform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, hoop_right, localInertia);
-    rbInfo.m_restitution = hoopRestitution;
-    rbInfo.m_friction = hoopFriction;
-		btRigidBody* body = new btRigidBody(rbInfo);
-		dynamicsWorld->addRigidBody(body);
-	}
-  {
-		btCollisionShape* hoop_left = new btBoxShape(hoopShape);
-		collisionShapes.push_back(hoop_left);
-		btTransform transform;
-		transform.setIdentity();
-		transform.setOrigin(leftLocation);
-
-		btScalar mass(0.);
-		btVector3 localInertia(0, 0, 0);
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(transform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, hoop_left, localInertia);
-    rbInfo.m_restitution = hoopRestitution;
-    rbInfo.m_friction = hoopFriction;
-		btRigidBody* body = new btRigidBody(rbInfo);
-		dynamicsWorld->addRigidBody(body);
 	}
 
   return dynamicsWorld;
@@ -290,39 +197,6 @@ void init_ball(GLuint programID) {
   glEnableVertexAttribArray(1);
 }
 
-unsigned int va_hoop;
-unsigned int vb_hoop;
-unsigned int va_hoop_tex;
-unsigned int vb_hoop_tex;
-unsigned int hoop_vertices_size;
-void init_hoop(GLuint programID) {
-  std::vector<vec3> vertices;
-  std::vector<vec2> uvs;
-  std::vector<vec3> normals; // Won't be used at the moment.
-  bool res = loadOBJ("../playground/hoop.obj", vertices, uvs, normals);
-  hoop_vertices_size = vertices.size();
-
-  glGenVertexArrays(1, &va_hoop);
-  glBindVertexArray(va_hoop);
-
-  glGenBuffers(1, &vb_hoop);
-  glBindBuffer(GL_ARRAY_BUFFER, vb_hoop);
-  glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vec3), &vertices[0], GL_STATIC_DRAW);
-  glVertexAttribPointer( 0, // matches the layout in the shader
-    3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
-
-	va_hoop_tex = loadDDS("../playground/hoop.dds");
-  glGenBuffers(1, &vb_hoop_tex);
-  glBindBuffer(GL_ARRAY_BUFFER, vb_hoop_tex);
-  glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(vec2), &uvs[0], GL_STATIC_DRAW);
-  glVertexAttribPointer( 1, // matches the layout in the shader
-    2, // <- note the 2
-    GL_FLOAT, GL_FALSE, 0, (void*)0 );
-
-  glEnableVertexAttribArray(0);
-  glEnableVertexAttribArray(1);
-}
-
 float rotation_ball = 0;
 float rotate_ball() {
   rotation_ball = rotation_ball +1 % 360;
@@ -385,7 +259,6 @@ int main( void ) {
   glfwWindowHint(GLFW_RESIZABLE,GL_FALSE);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   GLFWwindow* window = glfwCreateWindow( 1024, 720, "Playground", NULL, NULL );
@@ -396,6 +269,7 @@ int main( void ) {
   }
   glfwMakeContextCurrent(window);
   glfwSetMouseButtonCallback(window, fireBall);
+	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
   // Initialize GLEW
   if (glewInit() != GLEW_OK) {
@@ -404,7 +278,6 @@ int main( void ) {
     return -1;
   }
 
-  hoop_location(0, 1, -4);
   btDiscreteDynamicsWorld* dynamicsWorld = initBulletWorld();
 
   glEnable( GL_DEPTH_TEST ); // Z-Buffer
@@ -412,9 +285,6 @@ int main( void ) {
 	glEnable(GL_CULL_FACE); // backface culling
 
   glClearColor(0.8f, 0.0f, 0.4f, 0.0f);
-
-	// Ensure we can capture the escape key being pressed below
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
   // shaders
   GLuint programID_Color = LoadShaders( "../common/Simple.vertexshader", "../common/Color.fragmentshader" );
@@ -430,16 +300,10 @@ int main( void ) {
 
     // initialize object buffers
   init_ball(programID_Texture);
-  init_hoop(programID_Texture);
   init_tri();
 
   // ball transforms
   mat4 scale2x = scale(mat4(), vec3(2.5,2.5,2.5));
-
-  // hoop transforms
-  mat4 hoopPosition = translate(hoopTranslation, vec3(-17.95f, -6.8f, -2.6f)); // obj has some weird built in coords
-  mat4 hoopScale = scale(mat4(), vec3(2.4f, 2.4f, 2.4f));
-  mat4 hoopRotation = rotate(mat4(), radians(-90.f), vec3(0, 1, 0));
 
   // ground/triange MVP
   mat4 translationMatrix_tri = translate(mat4(), vec3(0.0f, 0.0f, 2.0f));
@@ -498,18 +362,6 @@ int main( void ) {
       glDrawArrays(GL_TRIANGLES, 0, ball_vertices_size);
     }
 
-    { // hoop
-      mat4 Model = mat4(1) * hoopPosition * hoopScale * hoopRotation;
-      mat4 MVP = Projection * View * Model;
-
-      glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-      glBindVertexArray(va_hoop);
-      glBindBuffer(GL_ARRAY_BUFFER, vb_hoop);
-      glBindTexture(GL_TEXTURE_2D, va_hoop_tex);
-      glBindBuffer(GL_ARRAY_BUFFER, vb_hoop_tex);
-      glDrawArrays(GL_TRIANGLES, 0, hoop_vertices_size);
-    }
-
     { // ground
       glUseProgram(programID_Color);
       GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
@@ -523,9 +375,10 @@ int main( void ) {
 		// Swap buffers
 		glfwSwapBuffers(window);
 		glfwPollEvents();
-  } while( // Check if the ESC key was pressed or the window was closed
+  } while(
     glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
-    glfwWindowShouldClose(window) == 0
+    glfwWindowShouldClose(window) == 0 &&
+    glfwGetKey(window, GLFW_KEY_Q) != GLFW_PRESS
   );
 
   // cleanup
