@@ -13,7 +13,6 @@
     - target
       - graphic
       - register hit
-    - surroundings
   - docs
     - readme
     - how to play
@@ -53,6 +52,40 @@ void print_vec4( vec4 toPrint ) {
   std::cout<<glm::to_string(toPrint)<<std::endl;
 }
 
+void createSurrounding(bool isDepth, bool isFrontOrRight, float width, float depth, float depthOffset, btDiscreteDynamicsWorld* dynamicsWorld, btAlignedObjectArray<btCollisionShape*> collisionShapes) {
+  float height = 2.f;
+  float depthFromCenter = (depth/2)+depthOffset;
+  float widthFromCenter = width/2;
+
+  btCollisionShape* shape;
+  btTransform groundTransform;
+  groundTransform.setIdentity();
+  if ( isDepth ) { // going from front to back
+    shape = new btBoxShape(btVector3(btScalar(0.1), btScalar(height), btScalar(depth)));
+    if ( isFrontOrRight ) // right
+      groundTransform.setOrigin(btVector3(+widthFromCenter, height/2, depthFromCenter));
+    else // left
+      groundTransform.setOrigin(btVector3(-widthFromCenter, height/2, depthFromCenter));
+  } else { // going from left to right
+    shape = new btBoxShape(btVector3(btScalar(width), btScalar(height), btScalar(0.1f)));
+    if ( isFrontOrRight ) // front
+      groundTransform.setOrigin(btVector3(0, height/2, (depth+depthOffset)*-1));
+    else // back
+      groundTransform.setOrigin(btVector3(0, height/2,      0+(depthOffset*-1)));
+
+  }
+
+  btScalar mass(0.);
+  btVector3 localInertia(0, 0, 0);
+  btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+  btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, shape, localInertia);
+  rbInfo.m_restitution = 0.5f;
+  rbInfo.m_friction = 30.f;
+  btRigidBody* body = new btRigidBody(rbInfo);
+  dynamicsWorld->addRigidBody(body);
+  collisionShapes.push_back(shape);
+}
+
 btVector3 ballPosition = btVector3(0, 3, 0);
 btRigidBody* ballBody;
 btDefaultMotionState* ballMotionState;
@@ -68,41 +101,52 @@ btDiscreteDynamicsWorld* initBulletWorld() {
 	//the ground is a cube of side 100 at position y = -56.
 	//the sphere will hit it at y = -6, with center at -5
   {
-		btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
-		collisionShapes.push_back(groundShape);
-		btTransform groundTransform;
-		groundTransform.setIdentity();
-		groundTransform.setOrigin(btVector3(0, -50.5, 0));
-		btScalar mass(0.);
-		btVector3 localInertia(0, 0, 0);
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
+    btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
+    collisionShapes.push_back(groundShape);
+    btTransform groundTransform;
+    groundTransform.setIdentity();
+    groundTransform.setOrigin(btVector3(0, -50.5, 0));
+    btScalar mass(0.);
+    btVector3 localInertia(0, 0, 0);
+    btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+    btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
     rbInfo.m_restitution = 0.5f;
     rbInfo.m_friction = 30.f;
-		btRigidBody* body = new btRigidBody(rbInfo);
-		dynamicsWorld->addRigidBody(body);
-	}
-	{
-		btCollisionShape* ballShape = new btSphereShape(btScalar(1.));
-		collisionShapes.push_back(ballShape);
+    btRigidBody* body = new btRigidBody(rbInfo);
+    dynamicsWorld->addRigidBody(body);
+  }
+  {
+    btCollisionShape* ballShape = new btSphereShape(btScalar(1.));
+    collisionShapes.push_back(ballShape);
 
-		btTransform startTransform;
-		startTransform.setIdentity();
-		startTransform.setOrigin(ballPosition);
+    btTransform startTransform;
+    startTransform.setIdentity();
+    startTransform.setOrigin(ballPosition);
 
-		btScalar mass(1.f);
-		btVector3 localInertia(0, 0, 0);
+    btScalar mass(1.f);
+    btVector3 localInertia(0, 0, 0);
     ballShape->calculateLocalInertia(mass, localInertia);
-		ballMotionState = new btDefaultMotionState(startTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, ballMotionState, ballShape, localInertia);
+    ballMotionState = new btDefaultMotionState(startTransform);
+    btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, ballMotionState, ballShape, localInertia);
     rbInfo.m_restitution = 1.7f;
     rbInfo.m_friction = 1.5f;
-		ballBody = new btRigidBody(rbInfo);
+    ballBody = new btRigidBody(rbInfo);
 
     /* ballBody->applyForce(btVector3(0, 0, -35), btVector3(0, 6, 12)); */
 
-		dynamicsWorld->addRigidBody(ballBody);
-	}
+    dynamicsWorld->addRigidBody(ballBody);
+  }
+
+  { // surroundings
+    float depth = 12.f;
+    float width = 5.f;
+    float depthOffset = -5.f;
+
+    createSurrounding( true,  true,  width, depth, depthOffset, dynamicsWorld, collisionShapes );
+    createSurrounding( true,  false, width, depth, depthOffset, dynamicsWorld, collisionShapes );
+    createSurrounding( false, true,  width, depth, depthOffset, dynamicsWorld, collisionShapes );
+    createSurrounding( false, false, width, depth, depthOffset, dynamicsWorld, collisionShapes );
+  }
 
   return dynamicsWorld;
 }
@@ -335,6 +379,18 @@ int main( void ) {
 			/* 	body->getMotionState()->getWorldTransform(trans); */
     trans = obj->getWorldTransform();
 
+    btCollisionObject* o = dynamicsWorld->getCollisionObjectArray()[5];
+    btRigidBody* b = btRigidBody::upcast(o);
+    btTransform t2 = o->getWorldTransform();
+    // printf("x=%.02f, y=%.02f, z=%.02f\n", t2.getOrigin().getX(), t2.getOrigin().getY(), t2.getOrigin().getZ() );
+    printf("x=%.02f, z=%.02f\n", t2.getOrigin().getX(), t2.getOrigin().getZ() );
+    /*      x   z
+     * 2:  2.5  3
+     * 3: -2.5  3
+     * 4:   0   8
+     * 5:   0  -2
+     */
+
      // texture shaders
     glUseProgram(programID_Texture);
     GLuint MatrixID = glGetUniformLocation(programID_Texture, "MVP");
@@ -343,7 +399,7 @@ int main( void ) {
       float ballX = float(trans.getOrigin().getX());
       float ballY = float(trans.getOrigin().getY());
       float ballZ = float(trans.getOrigin().getZ());
-      /* printf("x=%.02f, y=%.02f, z=%.02f, %f\n", 1, ballX, ballY, ballZ ); */
+      // printf("x=%.02f, y=%.02f, z=%.02f\n", ballX, ballY, ballZ );
       mat4 matchBallWithSim = translate(mat4(), vec3(ballX, ballY, ballZ));
 
       if (ballY > 0.6) {
