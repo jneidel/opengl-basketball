@@ -4,7 +4,6 @@ project (Tutorials)
 
 find_package(OpenGL REQUIRED)
 
-
 if( CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR )
     message( FATAL_ERROR "Please select another Build Directory ! (and give it a clever name, like bin_Visual2012_64bits/)" )
 endif()
@@ -66,6 +65,8 @@ add_executable(playground
 	common/objloader.hpp
 	common/controls.cpp
 	common/controls.hpp
+  common/text2D.cpp
+  common/text2D.hpp
 )
 target_link_libraries(playground
 	${ALL_LIBS}
