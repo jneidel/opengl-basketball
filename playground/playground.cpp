@@ -1,24 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* MVP Specs
+/*
+  docs
+    - video (60fps?)
 
-  - shooting
-    - load up force with left mouse click
-    - bar to display force
-    - ball rotation
-      - func calculating rotation based on last location (differences)
-    - stop sliding on forever (friction?)
-  - scene
-    - target
-      - graphic
-      - register hit
-  - docs
-    - readme
-    - how to play
-      - keybindings
-    - video
-
+  more:
+    - more targets (higher up, more points)
 */
 
 // printing
@@ -43,7 +31,9 @@ using namespace glm;
 #include <common/texture.hpp>
 #include <common/objloader.hpp>
 #include <common/controls.hpp>
+#include <common/text2D.hpp>
 
+/* utils */
 void print_mat4( mat4 toPrint ) {
   // src: https://stackoverflow.com/a/15046613
   std::cout<<glm::to_string(toPrint)<<std::endl;
@@ -52,8 +42,9 @@ void print_vec4( vec4 toPrint ) {
   std::cout<<glm::to_string(toPrint)<<std::endl;
 }
 
+/* physics engine */
 void createSurrounding(bool isDepth, bool isFrontOrRight, float width, float depth, float depthOffset, btDiscreteDynamicsWorld* dynamicsWorld, btAlignedObjectArray<btCollisionShape*> collisionShapes) {
-  float height = 2.f;
+  float height = 6.f;
   float depthFromCenter = (depth/2)+depthOffset;
   float widthFromCenter = width/2;
 
@@ -72,7 +63,6 @@ void createSurrounding(bool isDepth, bool isFrontOrRight, float width, float dep
       groundTransform.setOrigin(btVector3(0, height/2, (depth+depthOffset)*-1));
     else // back
       groundTransform.setOrigin(btVector3(0, height/2,      0+(depthOffset*-1)));
-
   }
 
   btScalar mass(0.);
@@ -136,10 +126,25 @@ btDiscreteDynamicsWorld* initBulletWorld() {
 
     dynamicsWorld->addRigidBody(ballBody);
   }
+  {
+    btCollisionShape* roofShape = new btBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
+    collisionShapes.push_back(roofShape);
+    btTransform roofTransform;
+    roofTransform.setIdentity();
+    roofTransform.setOrigin(btVector3(0, 60.5, 0));
+    btScalar mass(0.);
+    btVector3 localInertia(0, 0, 0);
+    btDefaultMotionState* myMotionState = new btDefaultMotionState(roofTransform);
+    btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, roofShape, localInertia);
+    rbInfo.m_restitution = 0.5f;
+    rbInfo.m_friction = 30.f;
+    btRigidBody* body = new btRigidBody(rbInfo);
+    dynamicsWorld->addRigidBody(body);
+  }
 
   { // surroundings
     float depth = 12.f;
-    float width = 5.f;
+    float width = 7.f;
     float depthOffset = -5.f;
 
     createSurrounding( true,  true,  width, depth, depthOffset, dynamicsWorld, collisionShapes );
@@ -162,38 +167,341 @@ void resetBallPosition() {
   ballMotionState->setWorldTransform(resetTransform);
 }
 
+/* opengl objects */
+// mapping the objects from physics engine to opengl wasn't possible
+// (I only found examples using glut not glfw)
+
 unsigned int vb_color;
 
-unsigned int va_tri;
-unsigned int vb_tri;
-void init_tri() {
+unsigned int va_ground;
+unsigned int vb_ground;
+void init_ground() {
   float top_left_x  = -9.0;
-  float top_left_z  = -100.0;
+  float top_left_z  = -15.0;
   float top_right_x =  9.0;
   float bot_left_z  =  100.0;
+  float y = 0.95;
 
   static const GLfloat g_vertex_buffer_data_triange[] = {
-    top_left_x,  0.0f, top_left_z,
-    top_left_x,  0.0f, bot_left_z,
-    top_right_x,  0.0f, top_left_z,
-    top_right_x,  0.0f, top_left_z,
-    top_left_x,  0.0f, bot_left_z,
-    top_right_x,  0.0f, bot_left_z,
+    top_left_x,  y, top_left_z,
+    top_left_x,  y, bot_left_z,
+    top_right_x, y, top_left_z,
+    top_right_x, y, top_left_z,
+    top_left_x,  y, bot_left_z,
+    top_right_x, y, bot_left_z,
   };
 
   static const GLfloat g_color_buffer_data[] = {
-    0.3,  0.3,  0.3,
-    0.3,  0.3,  0.3,
-    0.3,  0.3,  0.3,
-    0.3,  0.3,  0.3,
-    0.3,  0.3,  0.3,
-    0.3,  0.3,  0.3,
+    0.0,    1,  0.0,
+      1,  0.0,  0.0,
+    0.0,    1,  0.0,
+    0.0,    1,  0.0,
+      1,  0.0,  0.0,
+      1,  0.0,  0.0,
   };
 
-  glGenVertexArrays(1, &va_tri);
-  glBindVertexArray(va_tri);
-  glGenBuffers(1, &vb_tri);
-  glBindBuffer(GL_ARRAY_BUFFER, vb_tri);
+  glGenVertexArrays(1, &va_ground);
+  glBindVertexArray(va_ground);
+  glGenBuffers(1, &vb_ground);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_ground);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
+  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  // color
+  glGenBuffers(1, &vb_color);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_color);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
+  glVertexAttribPointer( 1, // matches the layout in the shader
+    3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+}
+
+float wall_front_z = -15.0;
+float wall_back_z = 14.0;
+float wall_right_x = 6.3;
+float wall_right_z = wall_front_z;
+float wall_top_y = 24.0;
+float wall_bot_y = 0.95;
+float wall_left_x = wall_right_x *-1;
+float wall_left_z = wall_right_z;
+
+unsigned int va_frontWall;
+unsigned int vb_frontWall;
+void init_frontWall() {
+  float left_x  = wall_left_x;
+  float right_x = wall_right_x;
+  float top_y = wall_top_y;
+  float bot_y = wall_bot_y;
+  float z = wall_right_z;
+
+  static const GLfloat g_vertex_buffer_data_triange[] = {
+    left_x,  top_y, z,
+    left_x,  bot_y, z,
+    right_x, bot_y, z,
+    right_x, top_y, z,
+    left_x,  top_y, z,
+    right_x, bot_y, z,
+  };
+
+  static const GLfloat g_color_buffer_data[] = {
+    0.3,  0.3,  1.0,
+    0.3,  0.3,  1.0,
+    0.3,  0.3,  1.0,
+    0.3,  0.3,  1.0,
+    0.3,  0.3,  1.0,
+    0.3,  0.3,  1.0,
+  };
+
+  glGenVertexArrays(1, &va_frontWall);
+  glBindVertexArray(va_frontWall);
+  glGenBuffers(1, &vb_frontWall);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_frontWall);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
+  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  // color
+  glGenBuffers(1, &vb_color);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_color);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
+  glVertexAttribPointer( 1, // matches the layout in the shader
+    3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+}
+
+unsigned int va_rightSideWall;
+unsigned int vb_rightSideWall;
+void init_rightSideWall() {
+  float x = wall_right_x;
+  float top_y = wall_top_y;
+  float bot_y = wall_bot_y;
+  float front_z = wall_right_z;
+  float back_z = wall_back_z;
+
+  static const GLfloat g_vertex_buffer_data_triange[] = {
+    x, bot_y, front_z,
+    x, bot_y, back_z,
+    x, top_y, front_z,
+    x, top_y, front_z,
+    x, bot_y, back_z,
+    x, top_y, back_z,
+  };
+
+
+  static const GLfloat g_color_buffer_data[] = {
+    1.0,  0.3,  1.0,
+    1.0,  0.3,  1.0,
+    1.0,  0.3,  1.0,
+    1.0,  0.3,  1.0,
+    1.0,  0.3,  1.0,
+    1.0,  0.3,  1.0,
+  };
+
+  glGenVertexArrays(1, &va_rightSideWall);
+  glBindVertexArray(va_rightSideWall);
+  glGenBuffers(1, &vb_rightSideWall);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_rightSideWall);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
+  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  // color
+  glGenBuffers(1, &vb_color);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_color);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
+  glVertexAttribPointer( 1, // matches the layout in the shader
+    3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+}
+
+unsigned int va_leftSideWall;
+unsigned int vb_leftSideWall;
+void init_leftSideWall() {
+  float x = wall_left_x;
+  float top_y = wall_top_y;
+  float bot_y = wall_bot_y;
+  float front_z = wall_right_z;
+  float back_z = wall_back_z;
+
+  static const GLfloat g_vertex_buffer_data_triange[] = {
+    x, bot_y, back_z,
+    x, bot_y, front_z,
+    x, top_y, front_z,
+    x, bot_y, back_z,
+    x, top_y, front_z,
+    x, top_y, back_z,
+  };
+
+  static const GLfloat g_color_buffer_data[] = {
+    1.0,  0.3,  1.0,
+    1.0,  0.3,  1.0,
+    1.0,  0.3,  1.0,
+    1.0,  0.3,  1.0,
+    1.0,  0.3,  1.0,
+    1.0,  0.3,  1.0,
+  };
+
+  glGenVertexArrays(1, &va_leftSideWall);
+  glBindVertexArray(va_leftSideWall);
+  glGenBuffers(1, &vb_leftSideWall);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_leftSideWall);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
+  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  // color
+  glGenBuffers(1, &vb_color);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_color);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
+  glVertexAttribPointer( 1, // matches the layout in the shader
+    3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+}
+
+unsigned int va_backWall;
+unsigned int vb_backWall;
+void init_backWall() {
+  float left_x  = wall_left_x;
+  float right_x = wall_right_x;
+  float top_y = wall_top_y;
+  float bot_y = wall_bot_y;
+  float z = wall_back_z;
+
+  static const GLfloat g_vertex_buffer_data_triange[] = {
+    left_x,  bot_y, z,
+    left_x,  top_y, z,
+    right_x, bot_y, z,
+    left_x,  top_y, z,
+    right_x, top_y, z,
+    right_x, bot_y, z,
+  };
+
+  static const GLfloat g_color_buffer_data[] = {
+    0.3,  0.3,  1.0,
+    0.3,  0.3,  1.0,
+    0.3,  0.3,  1.0,
+    0.3,  0.3,  1.0,
+    0.3,  0.3,  1.0,
+    0.3,  0.3,  1.0,
+  };
+
+  glGenVertexArrays(1, &va_backWall);
+  glBindVertexArray(va_backWall);
+  glGenBuffers(1, &vb_backWall);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_backWall);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
+  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  // color
+  glGenBuffers(1, &vb_color);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_color);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
+  glVertexAttribPointer( 1, // matches the layout in the shader
+    3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+}
+
+unsigned int va_roof;
+unsigned int vb_roof;
+void init_roof() {
+  float top_left_x  = -9.0;
+  float top_left_z  = -15.0;
+  float top_right_x =  9.0;
+  float bot_left_z  =  100.0;
+  float y = wall_top_y;
+
+  static const GLfloat g_vertex_buffer_data_triange[] = {
+    top_left_x,  y, top_left_z,
+    top_right_x, y, top_left_z,
+    top_left_x,  y, bot_left_z,
+    top_right_x, y, top_left_z,
+    top_right_x, y, bot_left_z,
+    top_left_x,  y, bot_left_z,
+  };
+
+  static const GLfloat g_color_buffer_data[] = {
+      1,  0.9,  0.0,
+      1,  0.9,  0.0,
+      1,  0.9,  0.0,
+      1,  0.9,  0.0,
+      1,  0.9,  0.0,
+      1,  0.9,  0.0,
+  };
+
+  glGenVertexArrays(1, &va_roof);
+  glBindVertexArray(va_roof);
+  glGenBuffers(1, &vb_roof);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_roof);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
+  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  // color
+  glGenBuffers(1, &vb_color);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_color);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
+  glVertexAttribPointer( 1, // matches the layout in the shader
+    3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+}
+
+unsigned int va_target;
+unsigned int vb_target;
+void init_target() {
+  float z = wall_right_z+0.01;
+
+  float target_dimension = 0.75;
+  float top_y = 3;
+  float left_x = -target_dimension/2;
+  float mid_x = 0;
+  float right_x = left_x *-1;
+  float mid_y = top_y-target_dimension/2;
+  float bot_y = top_y-target_dimension;
+
+  float target_bar_width = 0.05;
+
+  static const GLfloat g_vertex_buffer_data_triange[] = {
+    left_x, mid_y, z,
+    right_x, mid_y, z,
+    left_x, mid_y+target_bar_width, z,
+    right_x, mid_y, z,
+    right_x, mid_y+target_bar_width, z,
+    left_x, mid_y+target_bar_width, z,
+    mid_x, top_y, z,
+    mid_x, bot_y, z,
+    mid_x+target_bar_width, top_y, z,
+    mid_x+target_bar_width, top_y, z,
+    mid_x, bot_y, z,
+    mid_x+target_bar_width, bot_y, z,
+  };
+
+  static const GLfloat g_color_buffer_data[] = {
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+    1,  0.0,  0.0,
+  };
+
+  glGenVertexArrays(1, &va_target);
+  glBindVertexArray(va_target);
+  glGenBuffers(1, &vb_target);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_target);
   glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
   glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
 
@@ -216,7 +524,7 @@ unsigned int ball_vertices_size;
 void init_ball(GLuint programID) {
   std::vector< glm::vec3 > vertices;
   std::vector< glm::vec2 > uvs;
-  std::vector< glm::vec3 > normals; // Won't be used at the moment.
+  std::vector< glm::vec3 > normals; // Unused
   bool res = loadOBJ("../playground/ball.obj", vertices, uvs, normals);
   ball_vertices_size = vertices.size();
 
@@ -241,6 +549,7 @@ void init_ball(GLuint programID) {
   glEnableVertexAttribArray(1);
 }
 
+/* configure ball */
 float rotation_ball = 0;
 float rotate_ball() {
   rotation_ball = rotation_ball +1 % 360;
@@ -249,7 +558,7 @@ float rotate_ball() {
 
 float force = 50;
 void fireBall(GLFWwindow* window, int button, int action, int mods) {
-  // Todo: check if ball is resting
+  // propell ball roughly in the direction you're looking
   if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
     /* For the angles from glfw:
      * 6.28 is 360°
@@ -322,7 +631,6 @@ int main( void ) {
     return -1;
   }
 
-  btDiscreteDynamicsWorld* dynamicsWorld = initBulletWorld();
 
   glEnable( GL_DEPTH_TEST ); // Z-Buffer
   glDepthFunc( GL_LESS ); // accept fragments if they are closer to the camera
@@ -334,23 +642,31 @@ int main( void ) {
   GLuint programID_Color = LoadShaders( "../common/Simple.vertexshader", "../common/Color.fragmentshader" );
   GLuint programID_Texture = LoadShaders( "../common/Transform.vertexshader", "../common/Texture.fragmentshader" );
 
-  // share MVP data
+  // MVP data
   mat4 Projection = perspective( radians(45.0f),  4.f/3.f, 0.1f, 100.0f ); // 45° field of view, 4:3, display range: 0.1 unit <-> 100 units
   mat4 View = lookAt(
     vec3(0, 6, 12), // positon of the camera in world space
     vec3(0, 1, 0), // looks at the origin
     vec3(0, 1, 0)  // head is up, -1 to look upside down
   );
-
-    // initialize object buffers
-  init_ball(programID_Texture);
-  init_tri();
-
-  // ball transforms
   mat4 scale2x = scale(mat4(), vec3(2.5,2.5,2.5));
 
-  // ground/triange MVP
-  mat4 translationMatrix_tri = translate(mat4(), vec3(0.0f, 0.0f, 2.0f));
+  // initialize object buffers
+  init_ball(programID_Texture);
+  init_ground();
+  init_frontWall();
+  init_rightSideWall();
+  init_leftSideWall();
+  init_backWall();
+  init_roof();
+  init_target();
+  initText2D( "../playground/Holstein.dds" );
+
+  btDiscreteDynamicsWorld* dynamicsWorld = initBulletWorld();
+
+  unsigned int hitCounter = 0;
+  unsigned int ticks = 0;
+  unsigned int tickOnLastHit = 0;
 
   do {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -360,55 +676,58 @@ int main( void ) {
       printf("ENTER -> reset\n");
       resetBallPosition();
     }
-    /* if (glfwGetKey(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) { */
-    /*   printf("ENTER -> reset\n"); */
-    /*   resetBallPosition(); */
-    /* } */
 
+    // MVP calc
     computeMatricesFromInputs(window);
     Projection = getProjectionMatrix();
     View = getViewMatrix();
-    mat4 MVP_tri = Projection * View * translationMatrix_tri;
+    mat4 MVP_groundWall = Projection * View * mat4();
 
-    // increment bullet ball simulation
+    // move ball in physics engine
     dynamicsWorld->stepSimulation(1.f / 60.f, 10);
     btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[1];
     btRigidBody* body = btRigidBody::upcast(obj);
     btTransform trans;
-			/* if (body && body->getMotionState()) */
-			/* 	body->getMotionState()->getWorldTransform(trans); */
     trans = obj->getWorldTransform();
 
-    btCollisionObject* o = dynamicsWorld->getCollisionObjectArray()[5];
-    btRigidBody* b = btRigidBody::upcast(o);
-    btTransform t2 = o->getWorldTransform();
-    // printf("x=%.02f, y=%.02f, z=%.02f\n", t2.getOrigin().getX(), t2.getOrigin().getY(), t2.getOrigin().getZ() );
-    printf("x=%.02f, z=%.02f\n", t2.getOrigin().getX(), t2.getOrigin().getZ() );
-    /*      x   z
-     * 2:  2.5  3
-     * 3: -2.5  3
-     * 4:   0   8
-     * 5:   0  -2
-     */
+    // translate ball position to opengl
+    const float ballX = trans.getOrigin().getX();
+    const float ballY = trans.getOrigin().getY();
+    const float ballZ = trans.getOrigin().getZ();
+    mat4 matchBallWithSim = translate(mat4(), vec3(ballX, ballY, ballZ));
+    printf("x=%.02f, y=%.02f, z=%.02f\n", ballX, ballY, ballZ );
 
-     // texture shaders
-    glUseProgram(programID_Texture);
-    GLuint MatrixID = glGetUniformLocation(programID_Texture, "MVP");
+    // register hits on the target
+    ticks += 1;
+    unsigned int tickDifference = ticks - tickOnLastHit;
+    const int HIT_TIMEOUT = 15; // 15 ticks
+    // don't trigger the counter more than once per enting of the hit zone
 
+    const float HIT_TOLERANCE = 0.22;
+    const float BACK_WALL_Z = -5.90;
+    const float MIDDLE_X = 0.0;
+    const float MIDDLE_Y = 1.20;
+    if ( tickDifference > HIT_TIMEOUT &&
+        ballZ <= BACK_WALL_Z + HIT_TOLERANCE &&
+        ballX >= MIDDLE_X - HIT_TOLERANCE && ballX <= MIDDLE_X + HIT_TOLERANCE &&
+        ballY >= MIDDLE_Y - HIT_TOLERANCE && ballY <= MIDDLE_Y + HIT_TOLERANCE ) {
+      hitCounter += 1;
+      tickOnLastHit = ticks;
+    }
+
+    /* draw objects */
     { // ball
-      float ballX = float(trans.getOrigin().getX());
-      float ballY = float(trans.getOrigin().getY());
-      float ballZ = float(trans.getOrigin().getZ());
-      // printf("x=%.02f, y=%.02f, z=%.02f\n", ballX, ballY, ballZ );
-      mat4 matchBallWithSim = translate(mat4(), vec3(ballX, ballY, ballZ));
-
-      if (ballY > 0.6) {
-        rotate_ball();
+      const float FLOOR_Y = 0.50;
+      if ( ballY > FLOOR_Y ) {
+        rotate_ball(); // looks cooler if the ball is spinning ;)
       }
 
       mat4 ballRotation = rotate(mat4(), radians((float) rotation_ball), vec3(1, 1, 0) );
       mat4 Model = mat4(1) * scale2x * matchBallWithSim * ballRotation;
       mat4 MVP = Projection * View * Model;
+
+      glUseProgram(programID_Texture);
+      GLuint MatrixID = glGetUniformLocation(programID_Texture, "MVP");
 
       glUniformMatrix4fv( MatrixID, 1, GL_FALSE, &MVP[0][0] );
       glBindVertexArray(va_ball);
@@ -417,15 +736,74 @@ int main( void ) {
       glBindBuffer(GL_ARRAY_BUFFER, vb_ball_tex);
       glDrawArrays(GL_TRIANGLES, 0, ball_vertices_size);
     }
-
     { // ground
       glUseProgram(programID_Color);
       GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
 
-      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_tri[0][0] );
-      glBindVertexArray(va_tri);
-      glBindBuffer(GL_ARRAY_BUFFER, vb_tri);
+      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
+      glBindVertexArray(va_ground);
+      glBindBuffer(GL_ARRAY_BUFFER, vb_ground);
       glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
+    }
+    { // frontWall
+      glUseProgram(programID_Color);
+      GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
+
+      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
+      glBindVertexArray(va_frontWall);
+      glBindBuffer(GL_ARRAY_BUFFER, vb_frontWall);
+      glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
+    }
+    { // rightSideWall
+      glUseProgram(programID_Color);
+      GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
+
+      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
+      glBindVertexArray(va_rightSideWall);
+      glBindBuffer(GL_ARRAY_BUFFER, vb_rightSideWall);
+      glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
+    }
+    { // leftSideWall
+      glUseProgram(programID_Color);
+      GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
+
+      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
+      glBindVertexArray(va_leftSideWall);
+      glBindBuffer(GL_ARRAY_BUFFER, vb_leftSideWall);
+      glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
+    }
+    { // backWall
+      glUseProgram(programID_Color);
+      GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
+
+      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
+      glBindVertexArray(va_backWall);
+      glBindBuffer(GL_ARRAY_BUFFER, vb_backWall);
+      glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
+    }
+    { // roof
+      glUseProgram(programID_Color);
+      GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
+
+      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
+      glBindVertexArray(va_roof);
+      glBindBuffer(GL_ARRAY_BUFFER, vb_roof);
+      glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
+    }
+    { // score text
+      // somehow overwrites roof color
+      char text[256];
+      sprintf(text,"Score: %d", hitCounter );
+      printText2D(text, 10, 560, 30);
+    }
+    { // target
+      glUseProgram(programID_Color);
+      GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
+
+      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
+      glBindVertexArray(va_target);
+      glBindBuffer(GL_ARRAY_BUFFER, vb_target);
+      glDrawArrays(GL_TRIANGLES, 0, 3*4); // each triange is 3
     }
 
 		// Swap buffers
@@ -438,13 +816,11 @@ int main( void ) {
   );
 
   // cleanup
-  /* glDeleteBuffers(1, &vb_color); */
-  /* glDeleteBuffers(1, &vb_tri); */
-  /* glDeleteVertexArrays(1, &va_tri); */
   glDisableVertexAttribArray(0);
   glDisableVertexAttribArray(1);
   glDeleteProgram(programID_Color);
   glDeleteProgram(programID_Texture);
+  cleanupText2D();
 
   glfwTerminate();
   return 0;
