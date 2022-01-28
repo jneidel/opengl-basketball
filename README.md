@@ -49,3 +49,6 @@ reseting will not work.
 
 I have liberally copied from [opengl-tutorial.org](http://www.opengl-tutorial.org).
 Using their tutorials as a base for this project.
+
+The ball texture was lifted from
+[XikoCat/OpenGL-Basketball](https://github.com/XikoCat/OpenGL-Basketball).
