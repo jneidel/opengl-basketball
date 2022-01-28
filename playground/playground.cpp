@@ -3,10 +3,7 @@
 
 /*
   docs
-    - video (60fps?)
-
-  more:
-    - more targets (higher up, more points)
+    - video + commentary
 */
 
 // printing
@@ -218,182 +215,94 @@ void init_ground() {
   glEnableVertexAttribArray(1);
 }
 
-float wall_front_z = -15.0;
-float wall_back_z = 14.0;
-float wall_right_x = 6.3;
-float wall_right_z = wall_front_z;
-float wall_top_y = 24.0;
-float wall_bot_y = 0.95;
-float wall_left_x = wall_right_x *-1;
-float wall_left_z = wall_right_z;
+float right_x = 6.3;
+float left_x = right_x *-1;
 
-unsigned int va_frontWall;
-unsigned int vb_frontWall;
-void init_frontWall() {
-  float left_x  = wall_left_x;
-  float right_x = wall_right_x;
-  float top_y = wall_top_y;
-  float bot_y = wall_bot_y;
-  float z = wall_right_z;
+float top_y = 24.0;
+float bot_y = 0.95;
 
+float front_z = -15.0;
+float back_z = 14.0;
+
+unsigned int va_sides;
+unsigned int vb_sides;
+void init_sides() { // and ground
   static const GLfloat g_vertex_buffer_data_triange[] = {
-    left_x,  top_y, z,
-    left_x,  bot_y, z,
-    right_x, bot_y, z,
-    right_x, top_y, z,
-    left_x,  top_y, z,
-    right_x, bot_y, z,
+    left_x,  bot_y, back_z, // back wall
+    left_x,  top_y, back_z,
+    right_x, bot_y, back_z,
+    left_x,  top_y, back_z,
+    right_x, top_y, back_z,
+    right_x, bot_y, back_z,
+    left_x,  bot_y, front_z, // ground
+    left_x,  bot_y, back_z,
+    right_x, bot_y, front_z,
+    right_x, bot_y, front_z,
+    left_x,  bot_y, back_z,
+    right_x, bot_y, back_z,
+    left_x, bot_y, back_z, // left
+    left_x, bot_y, front_z,
+    left_x, top_y, front_z,
+    left_x, bot_y, back_z,
+    left_x, top_y, front_z,
+    left_x, top_y, back_z,
+    left_x,  top_y, front_z, // front
+    left_x,  bot_y, front_z,
+    right_x, bot_y, front_z,
+    right_x, top_y, front_z,
+    left_x,  top_y, front_z,
+    right_x, bot_y, front_z,
+    right_x, bot_y, front_z,
+    right_x, bot_y, back_z, // right
+    right_x, top_y, front_z,
+    right_x, top_y, front_z,
+    right_x, bot_y, back_z,
+    right_x, top_y, back_z,
   };
+
+  // green: 0.23 0.93 0.67
+  // blue : 0.08 0.72 0.89
+
+  // red 0.90 0.11 0.36
+  // orange 1.00 0.74 0.22
 
   static const GLfloat g_color_buffer_data[] = {
-    0.3,  0.3,  1.0,
-    0.3,  0.3,  1.0,
-    0.3,  0.3,  1.0,
-    0.3,  0.3,  1.0,
-    0.3,  0.3,  1.0,
-    0.3,  0.3,  1.0,
+    0.23, 0.93, 0.67, // back
+    0.23, 0.93, 0.67,
+    0.23, 0.93, 0.67,
+    0.23, 0.93, 0.67,
+    0.23, 0.93, 0.67,
+    0.23, 0.93, 0.67,
+    0.08, 0.72, 0.89, // ground
+    0.23, 0.93, 0.67,
+    0.08, 0.72, 0.89,
+    0.08, 0.72, 0.89,
+    0.23, 0.93, 0.67,
+    0.23, 0.93, 0.67,
+    1.00, 0.74, 0.22, // left
+    1.00, 0.74, 0.22,
+    0.90, 0.11, 0.36,
+    1.00, 0.74, 0.22,
+    0.90, 0.11, 0.36,
+    0.90, 0.11, 0.36,
+    0.90, 0.11, 0.36, // front
+    1.00, 0.74, 0.22,
+    1.00, 0.74, 0.22,
+    0.90, 0.11, 0.36,
+    0.90, 0.11, 0.36,
+    1.00, 0.74, 0.22,
+    1.00, 0.74, 0.22, // right
+    1.00, 0.74, 0.22,
+    0.90, 0.11, 0.36,
+    0.90, 0.11, 0.36,
+    1.00, 0.74, 0.22,
+    0.90, 0.11, 0.36,
   };
 
-  glGenVertexArrays(1, &va_frontWall);
-  glBindVertexArray(va_frontWall);
-  glGenBuffers(1, &vb_frontWall);
-  glBindBuffer(GL_ARRAY_BUFFER, vb_frontWall);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
-  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
-
-  // color
-  glGenBuffers(1, &vb_color);
-  glBindBuffer(GL_ARRAY_BUFFER, vb_color);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
-  glVertexAttribPointer( 1, // matches the layout in the shader
-    3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
-
-  glEnableVertexAttribArray(0);
-  glEnableVertexAttribArray(1);
-}
-
-unsigned int va_rightSideWall;
-unsigned int vb_rightSideWall;
-void init_rightSideWall() {
-  float x = wall_right_x;
-  float top_y = wall_top_y;
-  float bot_y = wall_bot_y;
-  float front_z = wall_right_z;
-  float back_z = wall_back_z;
-
-  static const GLfloat g_vertex_buffer_data_triange[] = {
-    x, bot_y, front_z,
-    x, bot_y, back_z,
-    x, top_y, front_z,
-    x, top_y, front_z,
-    x, bot_y, back_z,
-    x, top_y, back_z,
-  };
-
-
-  static const GLfloat g_color_buffer_data[] = {
-    1.0,  0.3,  1.0,
-    1.0,  0.3,  1.0,
-    1.0,  0.3,  1.0,
-    1.0,  0.3,  1.0,
-    1.0,  0.3,  1.0,
-    1.0,  0.3,  1.0,
-  };
-
-  glGenVertexArrays(1, &va_rightSideWall);
-  glBindVertexArray(va_rightSideWall);
-  glGenBuffers(1, &vb_rightSideWall);
-  glBindBuffer(GL_ARRAY_BUFFER, vb_rightSideWall);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
-  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
-
-  // color
-  glGenBuffers(1, &vb_color);
-  glBindBuffer(GL_ARRAY_BUFFER, vb_color);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
-  glVertexAttribPointer( 1, // matches the layout in the shader
-    3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
-
-  glEnableVertexAttribArray(0);
-  glEnableVertexAttribArray(1);
-}
-
-unsigned int va_leftSideWall;
-unsigned int vb_leftSideWall;
-void init_leftSideWall() {
-  float x = wall_left_x;
-  float top_y = wall_top_y;
-  float bot_y = wall_bot_y;
-  float front_z = wall_right_z;
-  float back_z = wall_back_z;
-
-  static const GLfloat g_vertex_buffer_data_triange[] = {
-    x, bot_y, back_z,
-    x, bot_y, front_z,
-    x, top_y, front_z,
-    x, bot_y, back_z,
-    x, top_y, front_z,
-    x, top_y, back_z,
-  };
-
-  static const GLfloat g_color_buffer_data[] = {
-    1.0,  0.3,  1.0,
-    1.0,  0.3,  1.0,
-    1.0,  0.3,  1.0,
-    1.0,  0.3,  1.0,
-    1.0,  0.3,  1.0,
-    1.0,  0.3,  1.0,
-  };
-
-  glGenVertexArrays(1, &va_leftSideWall);
-  glBindVertexArray(va_leftSideWall);
-  glGenBuffers(1, &vb_leftSideWall);
-  glBindBuffer(GL_ARRAY_BUFFER, vb_leftSideWall);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
-  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
-
-  // color
-  glGenBuffers(1, &vb_color);
-  glBindBuffer(GL_ARRAY_BUFFER, vb_color);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
-  glVertexAttribPointer( 1, // matches the layout in the shader
-    3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
-
-  glEnableVertexAttribArray(0);
-  glEnableVertexAttribArray(1);
-}
-
-unsigned int va_backWall;
-unsigned int vb_backWall;
-void init_backWall() {
-  float left_x  = wall_left_x;
-  float right_x = wall_right_x;
-  float top_y = wall_top_y;
-  float bot_y = wall_bot_y;
-  float z = wall_back_z;
-
-  static const GLfloat g_vertex_buffer_data_triange[] = {
-    left_x,  bot_y, z,
-    left_x,  top_y, z,
-    right_x, bot_y, z,
-    left_x,  top_y, z,
-    right_x, top_y, z,
-    right_x, bot_y, z,
-  };
-
-  static const GLfloat g_color_buffer_data[] = {
-    0.3,  0.3,  1.0,
-    0.3,  0.3,  1.0,
-    0.3,  0.3,  1.0,
-    0.3,  0.3,  1.0,
-    0.3,  0.3,  1.0,
-    0.3,  0.3,  1.0,
-  };
-
-  glGenVertexArrays(1, &va_backWall);
-  glBindVertexArray(va_backWall);
-  glGenBuffers(1, &vb_backWall);
-  glBindBuffer(GL_ARRAY_BUFFER, vb_backWall);
+  glGenVertexArrays(1, &va_sides);
+  glBindVertexArray(va_sides);
+  glGenBuffers(1, &vb_sides);
+  glBindBuffer(GL_ARRAY_BUFFER, vb_sides);
   glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data_triange), g_vertex_buffer_data_triange, GL_STATIC_DRAW);
   glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
 
@@ -411,19 +320,13 @@ void init_backWall() {
 unsigned int va_roof;
 unsigned int vb_roof;
 void init_roof() {
-  float top_left_x  = -9.0;
-  float top_left_z  = -15.0;
-  float top_right_x =  9.0;
-  float bot_left_z  =  100.0;
-  float y = wall_top_y;
-
   static const GLfloat g_vertex_buffer_data_triange[] = {
-    top_left_x,  y, top_left_z,
-    top_right_x, y, top_left_z,
-    top_left_x,  y, bot_left_z,
-    top_right_x, y, top_left_z,
-    top_right_x, y, bot_left_z,
-    top_left_x,  y, bot_left_z,
+    left_x,  top_y, front_z,
+    right_x, top_y, front_z,
+    left_x,  top_y, back_z,
+    right_x, top_y, front_z,
+    right_x, top_y, back_z,
+    left_x,  top_y, back_z,
   };
 
   static const GLfloat g_color_buffer_data[] = {
@@ -456,15 +359,15 @@ void init_roof() {
 unsigned int va_target;
 unsigned int vb_target;
 void init_target() {
-  float z = wall_right_z+0.01;
+  float z = front_z+0.01;
 
   float target_dimension = 0.75;
-  float top_y = 3;
-  float left_x = -target_dimension/2;
+  top_y = 3;
+  left_x = -target_dimension/2;
   float mid_x = 0;
-  float right_x = left_x *-1;
+  right_x = left_x *-1;
   float mid_y = top_y-target_dimension/2;
-  float bot_y = top_y-target_dimension;
+  bot_y = top_y-target_dimension;
 
   float target_bar_width = 0.05;
 
@@ -653,11 +556,7 @@ int main( void ) {
 
   // initialize object buffers
   init_ball(programID_Texture);
-  init_ground();
-  init_frontWall();
-  init_rightSideWall();
-  init_leftSideWall();
-  init_backWall();
+  init_sides();
   init_roof();
   init_target();
   initText2D( "../playground/Holstein.dds" );
@@ -681,7 +580,7 @@ int main( void ) {
     computeMatricesFromInputs(window);
     Projection = getProjectionMatrix();
     View = getViewMatrix();
-    mat4 MVP_groundWall = Projection * View * mat4();
+    mat4 MVP_sides = Projection * View * mat4();
 
     // move ball in physics engine
     dynamicsWorld->stepSimulation(1.f / 60.f, 10);
@@ -695,7 +594,7 @@ int main( void ) {
     const float ballY = trans.getOrigin().getY();
     const float ballZ = trans.getOrigin().getZ();
     mat4 matchBallWithSim = translate(mat4(), vec3(ballX, ballY, ballZ));
-    printf("x=%.02f, y=%.02f, z=%.02f\n", ballX, ballY, ballZ );
+    // printf("x=%.02f, y=%.02f, z=%.02f\n", ballX, ballY, ballZ );
 
     // register hits on the target
     ticks += 1;
@@ -736,56 +635,20 @@ int main( void ) {
       glBindBuffer(GL_ARRAY_BUFFER, vb_ball_tex);
       glDrawArrays(GL_TRIANGLES, 0, ball_vertices_size);
     }
-    { // ground
+    { // sides
       glUseProgram(programID_Color);
       GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
 
-      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
-      glBindVertexArray(va_ground);
-      glBindBuffer(GL_ARRAY_BUFFER, vb_ground);
-      glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
-    }
-    { // frontWall
-      glUseProgram(programID_Color);
-      GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
-
-      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
-      glBindVertexArray(va_frontWall);
-      glBindBuffer(GL_ARRAY_BUFFER, vb_frontWall);
-      glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
-    }
-    { // rightSideWall
-      glUseProgram(programID_Color);
-      GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
-
-      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
-      glBindVertexArray(va_rightSideWall);
-      glBindBuffer(GL_ARRAY_BUFFER, vb_rightSideWall);
-      glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
-    }
-    { // leftSideWall
-      glUseProgram(programID_Color);
-      GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
-
-      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
-      glBindVertexArray(va_leftSideWall);
-      glBindBuffer(GL_ARRAY_BUFFER, vb_leftSideWall);
-      glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
-    }
-    { // backWall
-      glUseProgram(programID_Color);
-      GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
-
-      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
-      glBindVertexArray(va_backWall);
-      glBindBuffer(GL_ARRAY_BUFFER, vb_backWall);
-      glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
+      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_sides[0][0] );
+      glBindVertexArray(va_sides);
+      glBindBuffer(GL_ARRAY_BUFFER, vb_sides);
+      glDrawArrays(GL_TRIANGLES, 0, 3*10); // each triange is 3
     }
     { // roof
       glUseProgram(programID_Color);
       GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
 
-      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
+      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_sides[0][0] );
       glBindVertexArray(va_roof);
       glBindBuffer(GL_ARRAY_BUFFER, vb_roof);
       glDrawArrays(GL_TRIANGLES, 0, 3*2); // each triange is 3
@@ -800,7 +663,7 @@ int main( void ) {
       glUseProgram(programID_Color);
       GLuint MatrixID_Color = glGetUniformLocation(programID_Color, "MVP");
 
-      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_groundWall[0][0] );
+      glUniformMatrix4fv( MatrixID_Color, 1, GL_FALSE, &MVP_sides[0][0] );
       glBindVertexArray(va_target);
       glBindBuffer(GL_ARRAY_BUFFER, vb_target);
       glDrawArrays(GL_TRIANGLES, 0, 3*4); // each triange is 3
