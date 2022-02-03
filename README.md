@@ -1,6 +1,12 @@
-# opengl basketball
+# opengl-basketball
 
 > without any baskets
+
+A simple OpenGL basketball-inspired game written for my uni module
+"Computergrafik".
+It features the Bullet physics engine.
+
+Here's the [demo](demo.mkv) (in German).
 
 ## Dependencies
 
